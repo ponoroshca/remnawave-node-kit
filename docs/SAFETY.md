@@ -17,6 +17,22 @@
 Существующую установку не трогает без `--force`; с `--force` старые `.env` и `compose`
 остаются рядом как `*.bak-<дата>`.
 
+Содержимое `docker-compose.yml`, которое пишет скрипт (чтобы не было сюрпризов):
+
+```yaml
+services:
+  remnanode:
+    container_name: remnanode
+    image: ghcr.io/remnawave/node:latest    # или ваш --image
+    env_file: [.env]                        # NODE_PORT, SECRET_KEY, XTLS_API_PORT
+    network_mode: host                      # xray слушает порты сервера напрямую
+    restart: always
+    cap_add: [NET_ADMIN]
+    ulimits: { nofile: { soft: 1048576, hard: 1048576 } }
+    volumes:                                # только с --bridge
+      - /var/lib/remnanode/*.dat:/usr/local/share/xray/*.dat
+```
+
 ## tune-net.sh
 
 `/etc/sysctl.d/99-node-kit-net.conf` — BBR, `fq`, буферы 64 МБ (8 МБ при памяти ≤ 1,5 ГБ),
@@ -44,6 +60,14 @@ Watchdog перезагрузит сервер, только если само �
 перезапускает снова. С `--install-timer` — копия в `/usr/local/sbin/`, юниты
 `geodata-update.service/.timer` (воскресенье 05:10 ± 10 мин). Отмена таймера:
 `systemctl disable --now geodata-update.timer`.
+
+На OpenVZ/LXC настройки ядра и модули недоступны — скрипт пропустит их с сообщением, а не упадёт.
+
+## uninstall-node.sh
+
+Спрашивает про каждую часть отдельно: контейнер и `/opt/remnanode`, geodata, настройки
+ядра node-kit, таймер geodata, earlyoom. Файрвол и своп не трогает (говорит, где они).
+Ноду в панели удаляете руками.
 
 ## probe-speed.sh, probe-steal.sh, health.sh
 
