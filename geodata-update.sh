@@ -17,7 +17,11 @@ ALL=0; DRY=0
 for a in "$@"; do case "$a" in --all) ALL=1 ;; --dry-run) DRY=1 ;; --install-timer) INSTALL=1 ;; -h|--help) sed -n '2,14p' "$0"; exit 0 ;; esac; done
 [ "$(id -u)" = 0 ] || { echo "нужен root (sudo)"; exit 1; }
 if [ "${INSTALL:-0}" = 1 ]; then
-  install -m 755 "$0" /usr/local/sbin/geodata-update.sh
+  if [ -f "$0" ]; then install -m 755 "$0" /usr/local/sbin/geodata-update.sh
+  else  # запущен через «bash -s» (fleet.sh / curl) — файла нет, берём копию из репозитория
+    curl -fsSL --retry 3 -o /usr/local/sbin/geodata-update.sh https://raw.githubusercontent.com/ponoroshca/remnawave-node-kit/main/geodata-update.sh || { echo "не удалось получить скрипт для таймера"; exit 1; }
+    chmod 755 /usr/local/sbin/geodata-update.sh
+  fi
   cat > /etc/systemd/system/geodata-update.service <<'U'
 [Unit]
 Description=geodata-update: обновление списков маршрутизации с откатом

@@ -52,7 +52,6 @@ fi
 [ -z "$OPEN" ] || [ -n "$PANEL_IP" ] || { echo "--open работает только вместе с --panel-ip"; exit 2; }
 
 say() { echo "$@"; }
-run() { if [ "$DRY" = 1 ]; then echo "  [dry-run] $*"; else "$@"; fi; }
 
 say "══ install-node: $(hostname) ($( [ "$BRIDGE" = 1 ] && echo мост || echo нода )) ══"
 if [ -d /opt/remnanode ] && [ "$FORCE" != 1 ]; then
@@ -104,7 +103,7 @@ if [ "$BRIDGE" = 1 ]; then
   mkdir -p /var/lib/remnanode && cd /var/lib/remnanode
   get() {  # <файл> <url> <мин.байт> — качаем, только если ещё нет годного; неудача не валит скрипт
     if [ -s "$1" ] && [ "$(stat -c %s "$1")" -ge "$3" ]; then say "  geodata: $1 уже есть"; return 0; fi
-    if curl -sL --fail --max-time 300 --retry 3 --retry-delay 3 -o "$1.part" "$2" && [ "$(stat -c %s "$1.part")" -ge "$3" ]; then
+    if curl -sL --fail --max-time 300 --retry 3 --retry-delay 3 -o "$1.part" "$2" && [ "$(stat -c %s "$1.part" 2>/dev/null || echo 0)" -ge "$3" ]; then
       mv "$1.part" "$1"; say "  geodata: $1 скачан ($(( $(stat -c %s "$1") / 1048576 )) МБ)"
     else rm -f "$1.part"; say "  geodata: $1 НЕ СКАЧАЛСЯ"; fi
   }
@@ -155,13 +154,14 @@ services:
         hard: 1048576
 ${VOLUMES}
 COMPOSE
-cd /opt/remnanode && docker compose up -d 2>&1 | tail -2 | sed 's/^/  /'
+cd /opt/remnanode && { docker compose up -d 2>&1 | tail -2 | sed 's/^/  /'; } || { echo "ОШИБКА: контейнер не поднялся — смотрите вывод выше (образ не скачался? docker compose logs remnanode)"; exit 1; }
 
 # ── файрвол ────────────────────────────────────────────────────────────────────
 if [ -n "$PANEL_IP" ]; then
   if command -v ufw >/dev/null 2>&1; then
+    # ssh открываем ПЕРВЫМ: и стандартный 22, и тот порт, на котором sshd реально слушает
     sshp=$(ss -ltnp 2>/dev/null | awk '/sshd/{print $4}' | grep -oE '[0-9]+$' | sort -u | head -1); sshp=${sshp:-22}
-    ufw allow "$sshp/tcp" >/dev/null
+    ufw allow 22/tcp >/dev/null; [ "$sshp" != 22 ] && ufw allow "$sshp/tcp" >/dev/null
     ufw allow from "$PANEL_IP" to any port "$PORT" proto tcp >/dev/null
     for p in $(echo "$OPEN" | tr ',' ' '); do ufw allow "$p/tcp" >/dev/null; done
     ufw --force enable >/dev/null 2>&1
@@ -176,5 +176,10 @@ st=$(docker ps --format '{{.Status}}' --filter name=remnanode)
 xv=$(docker exec remnanode xray version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
 lst=$(ss -ltn 2>/dev/null | grep -c ":$PORT " || true)
 say "RESULT $(hostname): контейнер=[${st:-нет}] xray=${xv:-?} порт $PORT слушает=$([ "$lst" -gt 0 ] && echo да || echo НЕТ)"
+if [ -z "$st" ] || [ "$lst" -eq 0 ]; then
+  say "Порт не слушает — последние строки лога контейнера:"
+  docker logs --tail 8 remnanode 2>&1 | sed 's/^/  │ /'
+  say "Если там «Please fix your .env file» — SECRET_KEY неверный или обрезан: возьмите его в панели заново и запустите с --force."
+  exit 1
+fi
 say "Дальше: в панели нода должна стать «на связи»; привяжите ей профиль и инбаунды. Здоровье: ./health.sh"
-[ -n "$st" ] && [ "$lst" -gt 0 ] || exit 1
