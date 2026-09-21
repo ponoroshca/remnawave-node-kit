@@ -110,6 +110,7 @@ Remnawave 2.x (`ghcr.io/remnawave/node`); root; x86_64 и arm64. Виртуал�
 
 - [Мост или нода с нуля, пошагово](docs/START-HERE.md)
 - [Как читать health, probe-speed, probe-steal](docs/health.md)
+- [Справочник: все скрипты, флаги, файлы, коды выхода](docs/reference.md)
 - [Что меняет каждый скрипт и как отменить](docs/SAFETY.md)
 - [Почему именно такие значения](docs/tuning.md)
 - [Вопросы и неполадки](docs/faq.md)
