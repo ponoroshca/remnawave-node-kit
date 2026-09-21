@@ -1,0 +1,26 @@
+name: check
+on: [push, pull_request]
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash syntax
+        run: bash -n *.sh
+      - name: install-node refuses without a key, with a short key, with --open alone
+        run: |
+          rc=0; sudo ./install-node.sh || rc=$?; [ "$rc" -eq 2 ]
+          rc=0; sudo ./install-node.sh --secret abc || rc=$?; [ "$rc" -eq 2 ]
+          rc=0; sudo ./install-node.sh --secret 0123456789abcdef0123456789 --open 2053 || rc=$?; [ "$rc" -eq 2 ]
+      - name: install-node dry-run and existing-install guard
+        run: |
+          sudo ./install-node.sh --secret 0123456789abcdef0123456789 --bridge --panel-ip 203.0.113.5 --open 2053 --dry-run | grep -q "план:"
+          sudo mkdir -p /opt/remnanode; rc=0; sudo ./install-node.sh --secret 0123456789abcdef0123456789 || rc=$?; [ "$rc" -eq 1 ]; sudo rmdir /opt/remnanode
+      - name: tune-resilience dry-run, probes, health run without errors
+        run: |
+          sudo ./tune-resilience.sh --dry-run | grep -q conntrack_max
+          ./probe-steal.sh | grep -q steal
+          ./health.sh | grep -q "cores="
+      - name: fleet refuses without a list
+        run: |
+          rc=0; ./fleet.sh nope.txt health.sh || rc=$?; [ "$rc" -eq 2 ]
