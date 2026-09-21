@@ -12,6 +12,7 @@
 #   sudo ./geodata-update.sh --dry-run        # скачать и сравнить, ничего не менять
 #   sudo ./geodata-update.sh --install-timer  # раз в неделю (вс 05:10 ± 10 мин) через systemd
 set -u
+command -v curl >/dev/null || { echo "нужен curl (apt-get install curl)"; exit 1; }
 DIR=/var/lib/remnanode
 ALL=0; DRY=0
 for a in "$@"; do case "$a" in --all) ALL=1 ;; --dry-run) DRY=1 ;; --install-timer) INSTALL=1 ;; -h|--help) sed -n '2,14p' "$0"; exit 0 ;; esac; done

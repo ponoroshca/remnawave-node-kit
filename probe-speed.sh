@@ -8,6 +8,7 @@
 #   DUR=10 ./probe-speed.sh          # дольше
 #   SRC_EU=https://… SRC_RU=http://… ./probe-speed.sh   # свои источники (файл ≥ 1 ГБ, отдаётся по GET)
 set -u
+command -v curl >/dev/null || { echo "нужен curl (apt-get install curl)"; exit 1; }
 DUR=${DUR:-6}
 SRC_EU=${SRC_EU:-https://fsn1-speed.hetzner.com/1GB.bin}
 SRC_RU=${SRC_RU:-http://speedtest.selectel.ru/1GB}

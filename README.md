@@ -87,7 +87,8 @@ cp examples/nodes.txt nodes.txt && nano nodes.txt     # «имя ip» по ст�
 
 ## Совместимость
 
-Ubuntu 22.04 / 24.04, Debian 12; Remnawave 2.x (`ghcr.io/remnawave/node`); root.
+Ubuntu 22.04 / 24.04, Debian 12 (docker ставится из apt, а где нет compose v2 — из репозитория Docker);
+Remnawave 2.x (`ghcr.io/remnawave/node`); root.
 Нода **не должна быть новее панели** — при ошибках рукопожатия панель ↔ нода пиньте версию:
 `--image ghcr.io/remnawave/node:2.8.0` (см. [faq](docs/faq.md)).
 

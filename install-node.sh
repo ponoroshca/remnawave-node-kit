@@ -63,17 +63,27 @@ if [ "$DRY" = 1 ]; then
   exit 0
 fi
 
-# ── docker ─────────────────────────────────────────────────────────────────────
+# ── curl, docker ───────────────────────────────────────────────────────────────
 export DEBIAN_FRONTEND=noninteractive
+if ! command -v curl >/dev/null 2>&1; then
+  apt-get update -qq >/dev/null 2>&1; apt-get install -y -qq curl ca-certificates >/dev/null 2>&1 || { echo "нужен curl (apt-get install curl)"; exit 1; }
+fi
 if ! command -v docker >/dev/null 2>&1; then
-  say "  docker: ставлю…"
+  say "  docker: ставлю из apt…"
   apt-get update -qq >/dev/null 2>&1
   apt-get install -y -qq docker.io docker-compose-v2 >/dev/null 2>&1 \
     || apt-get install -y -qq docker.io docker-compose-plugin >/dev/null 2>&1 \
-    || { echo "не удалось поставить docker через apt — поставьте вручную (https://docs.docker.com/engine/install/) и запустите снова"; exit 1; }
-  systemctl enable --now docker >/dev/null 2>&1
+    || apt-get install -y -qq docker.io >/dev/null 2>&1 || true
+  systemctl enable --now docker >/dev/null 2>&1 || true
 fi
-docker compose version >/dev/null 2>&1 || { echo "нет docker compose (v2) — apt-get install docker-compose-v2 или docker-compose-plugin"; exit 1; }
+if ! docker compose version >/dev/null 2>&1; then
+  # Debian 12 и старые Ubuntu: в apt нет compose v2 — ставим docker из официального репозитория Docker
+  say "  docker compose v2 в apt нет — ставлю docker из репозитория Docker (get.docker.com)…"
+  curl -fsSL https://get.docker.com -o /tmp/get-docker.sh && sh /tmp/get-docker.sh >/dev/null 2>&1; rm -f /tmp/get-docker.sh
+  systemctl enable --now docker >/dev/null 2>&1 || true
+fi
+command -v docker >/dev/null 2>&1 || { echo "не удалось поставить docker — поставьте вручную (https://docs.docker.com/engine/install/) и запустите снова"; exit 1; }
+docker compose version >/dev/null 2>&1 || { echo "нет docker compose v2 — поставьте docker из репозитория Docker: curl -fsSL https://get.docker.com | sh"; exit 1; }
 say "  docker: $(docker --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1), compose: $(docker compose version --short 2>/dev/null)"
 
 # ── сеть ───────────────────────────────────────────────────────────────────────
